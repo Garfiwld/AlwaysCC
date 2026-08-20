@@ -1,6 +1,6 @@
 # AlwaysCC Extension Packaging Script
 Write-Host "==================================================="
-Write-Host "    AlwaysCC Extension for Firefox"
+Write-Host "    AlwaysCC Extension (Chrome + Firefox)"
 Write-Host "==================================================="
 Write-Host ""
 
@@ -27,8 +27,8 @@ if ($missingFiles -gt 0) {
 
 # Create build directory
 Write-Host "Creating build directory..."
-if (Test-Path "build") { 
-    Remove-Item -Recurse -Force "build" 
+if (Test-Path "build") {
+    Remove-Item -Recurse -Force "build"
 }
 New-Item -ItemType Directory -Path "build" | Out-Null
 
@@ -39,7 +39,7 @@ New-Item -ItemType Directory -Path "$tempDir\icons" | Out-Null
 
 # Copy files
 Write-Host ""
-Write-Host "[1/2] Packaging Firefox extension..."
+Write-Host "[1/2] Packaging extension..."
 Copy-Item "manifest.json" -Destination $tempDir
 Copy-Item "content.js" -Destination $tempDir
 Copy-Item "popup.html" -Destination $tempDir
@@ -62,28 +62,21 @@ if (Test-Path "icons\icon-96.png") {
     $iconWarning = $true
 }
 
-# Create the XPI file (which is just a ZIP file)
+# Create the ZIP file (installable on both Chrome Web Store and Firefox AMO)
 Write-Host ""
-Write-Host "[2/2] Creating Firefox XPI package..."
-$xpiFile = "build\alwayscc-firefox.xpi"
+Write-Host "[2/2] Creating extension package..."
+$zipFile = "build\alwayscc.zip"
 
-if (Test-Path $xpiFile) {
-    Remove-Item $xpiFile -Force
+if (Test-Path $zipFile) {
+    Remove-Item $zipFile -Force
 }
 
-# Use simpler approach with Compress-Archive
 try {
-    Compress-Archive -Path "$tempDir\*" -DestinationPath $xpiFile -Force
-
-    # Rename .zip to .xpi if Compress-Archive created a .zip file
-    if (-not (Test-Path $xpiFile) -and (Test-Path "$xpiFile.zip")) {
-        Rename-Item -Path "$xpiFile.zip" -NewName (Split-Path $xpiFile -Leaf)
-    }
-    
-    Write-Host "Successfully created XPI file."
-} 
+    Compress-Archive -Path "$tempDir\*" -DestinationPath $zipFile -Force
+    Write-Host "Successfully created ZIP file."
+}
 catch {
-    Write-Host "ERROR: An error occurred while creating the XPI file."
+    Write-Host "ERROR: An error occurred while creating the ZIP file."
     Write-Host $_.Exception.Message
     exit 1
 }
@@ -97,7 +90,7 @@ Write-Host "==================================================="
 Write-Host "    Packaging Completed Successfully!"
 Write-Host "==================================================="
 Write-Host ""
-Write-Host "Firefox package: $xpiFile"
+Write-Host "Package: $zipFile"
 Write-Host ""
 
 if ($iconWarning) {
@@ -105,13 +98,20 @@ if ($iconWarning) {
     Write-Host ""
 }
 
+Write-Host "Installation Instructions for Chrome:"
+Write-Host ""
+Write-Host "- Unzip the package (or use the project folder directly)"
+Write-Host "- Open Chrome and go to chrome://extensions"
+Write-Host "- Enable 'Developer mode' (top right)"
+Write-Host "- Click 'Load unpacked' and select the extracted folder"
+Write-Host ""
 Write-Host "Installation Instructions for Firefox:"
 Write-Host ""
 Write-Host "Method 1 (Temporary Installation - for testing):"
 Write-Host "- Open Firefox and go to about:debugging"
 Write-Host "- Click 'This Firefox'"
 Write-Host "- Click 'Load Temporary Add-on...'"
-Write-Host "- Select the .xpi file"
+Write-Host "- Select the manifest.json inside the extracted package"
 Write-Host ""
 Write-Host "Method 2 (For development with signature bypass):"
 Write-Host "- In Firefox, navigate to about:config"
@@ -122,5 +122,8 @@ Write-Host "Method 3 (Permanent Installation - requires signing):"
 Write-Host "- Submit your extension to addons.mozilla.org for signing"
 Write-Host "- Or use web-ext tool to sign your extension"
 Write-Host ""
+Write-Host "The same $zipFile can be uploaded directly to the Chrome Web Store"
+Write-Host "developer dashboard and to addons.mozilla.org."
+Write-Host ""
 Write-Host "Packaging process complete. Press any key to exit..."
-$host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null 
+$host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null
