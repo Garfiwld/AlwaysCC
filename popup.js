@@ -1,80 +1,82 @@
+// Languages offered as subtitle preferences (also used as auto-translate targets)
+const LANGUAGES = [
+  "Afrikaans", "Albanian", "Amharic", "Arabic", "Armenian", "Azerbaijani",
+  "Basque", "Belarusian", "Bengali", "Bosnian", "Bulgarian", "Catalan",
+  "Cebuano", "Chinese (Simplified)", "Chinese (Traditional)", "Corsican",
+  "Croatian", "Czech", "Danish", "Dutch", "English", "Esperanto", "Estonian",
+  "Finnish", "French", "Frisian", "Galician", "Georgian", "German", "Greek",
+  "Gujarati", "Haitian Creole", "Hausa", "Hawaiian", "Hebrew", "Hindi",
+  "Hmong", "Hungarian", "Icelandic", "Igbo", "Indonesian", "Irish",
+  "Italian", "Japanese", "Javanese", "Kannada", "Kazakh", "Khmer",
+  "Kinyarwanda", "Korean", "Kurdish", "Kyrgyz", "Lao", "Latin", "Latvian",
+  "Lithuanian", "Luxembourgish", "Macedonian", "Malagasy", "Malay",
+  "Malayalam", "Maltese", "Maori", "Marathi", "Mongolian",
+  "Myanmar (Burmese)", "Nepali", "Norwegian", "Nyanja (Chichewa)",
+  "Odia (Oriya)", "Pashto", "Persian", "Polish", "Portuguese", "Punjabi",
+  "Romanian", "Russian", "Samoan", "Scots Gaelic", "Serbian", "Sesotho",
+  "Shona", "Sindhi", "Sinhala", "Slovak", "Slovenian", "Somali", "Spanish",
+  "Sundanese", "Swahili", "Swedish", "Tagalog (Filipino)", "Tajik", "Tamil",
+  "Tatar", "Telugu", "Thai", "Turkish", "Turkmen", "Ukrainian", "Urdu",
+  "Uyghur", "Uzbek", "Vietnamese", "Welsh", "Xhosa", "Yiddish", "Yoruba",
+  "Zulu"
+];
+
+const DEFAULT_LANGUAGE = "Thai";
+
 document.addEventListener('DOMContentLoaded', function() {
   // DOM elements
+  const enabledToggle = document.getElementById('enabled-toggle');
   const subtitlePreference = document.getElementById('subtitle-preference');
-  const customSubtitle = document.getElementById('custom-subtitle');
-  const customContainer = document.getElementById('custom-option-container');
-  const saveBtn = document.getElementById('save-btn');
   const status = document.getElementById('status');
-  const presetButtons = document.querySelectorAll('.preset-btn');
 
-  // Load saved preferences
-  browser.storage.sync.get('preferredSubtitle').then((result) => {
-    if (result.preferredSubtitle) {
-      // Check if the value matches any of our predefined options
-      const isPreDefinedOption = [...subtitlePreference.options].some(option => {
-        return option.value === result.preferredSubtitle && option.value !== 'custom';
-      });
+  // Populate the language list
+  LANGUAGES.forEach(language => {
+    const option = document.createElement('option');
+    option.value = language;
+    option.textContent = language;
+    subtitlePreference.appendChild(option);
+  });
 
-      if (isPreDefinedOption) {
-        subtitlePreference.value = result.preferredSubtitle;
-      } else {
-        // It's a custom value
-        subtitlePreference.value = 'custom';
-        customSubtitle.value = result.preferredSubtitle;
-        customContainer.style.display = 'block';
-      }
-    }
+  // Load saved preference (default to Thai if none saved yet)
+  chrome.storage.sync.get('preferredSubtitle').then((result) => {
+    subtitlePreference.value = result.preferredSubtitle || DEFAULT_LANGUAGE;
   }).catch(error => {
     console.error("Error loading preferences:", error);
   });
 
-  // Show/hide custom input based on select value
-  subtitlePreference.addEventListener('change', function() {
-    if (this.value === 'custom') {
-      customContainer.style.display = 'block';
-    } else {
-      customContainer.style.display = 'none';
-    }
+  // Load enabled state (default to enabled if none saved yet)
+  chrome.storage.sync.get('extensionEnabled').then((result) => {
+    enabledToggle.checked = result.extensionEnabled !== false;
+  }).catch(error => {
+    console.error("Error loading enabled state:", error);
   });
 
-  // Handle preset buttons
-  presetButtons.forEach(button => {
-    button.addEventListener('click', function() {
-      const value = this.getAttribute('data-value');
-      subtitlePreference.value = 'custom';
-      customSubtitle.value = value;
-      customContainer.style.display = 'block';
+  // Save enabled state immediately when toggled
+  enabledToggle.addEventListener('change', function() {
+    chrome.storage.sync.set({
+      extensionEnabled: enabledToggle.checked
+    }).catch(error => {
+      console.error("Error saving enabled state:", error);
     });
   });
 
-  // Save preferences
-  saveBtn.addEventListener('click', function() {
-    const preferredValue = subtitlePreference.value === 'custom' 
-      ? customSubtitle.value.trim() 
-      : subtitlePreference.value;
-    
-    // Validate that we have a value
-    if (!preferredValue) {
-      status.textContent = 'Please enter a subtitle preference';
-      status.style.color = '#c00';
-      return;
-    }
+  // Save preference immediately when the language selection changes
+  subtitlePreference.addEventListener('change', function() {
+    const preferredValue = subtitlePreference.value;
 
-    // Save to storage
-    browser.storage.sync.set({
+    chrome.storage.sync.set({
       preferredSubtitle: preferredValue
     }).then(() => {
-      status.textContent = 'Preferences saved!';
+      status.textContent = 'Saved!';
       status.style.color = '#080';
-      
-      // Show success for 1.5 seconds, then clear
+
       setTimeout(() => {
         status.textContent = '';
       }, 1500);
     }).catch(error => {
-      status.textContent = 'Error saving preferences.';
+      status.textContent = 'Error saving preference.';
       status.style.color = '#c00';
-      console.error("Error saving preferences:", error);
+      console.error("Error saving preference:", error);
     });
   });
-}); 
+});

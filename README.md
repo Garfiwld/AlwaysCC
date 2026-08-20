@@ -7,38 +7,38 @@
 **Never miss a word on YouTube again - automatically enable captions on every video**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Firefox Add-on](https://img.shields.io/badge/Firefox-Add--on-FF7139.svg?logo=firefox-browser)](https://addons.mozilla.org/en-US/firefox/addon/alwayscc/)
 
 </div>
 
 ## Overview
 
-AlwaysCC is a Firefox extension that automatically enables closed captions on YouTube videos and lets you choose your preferred subtitle language or translation. No more manually clicking the CC button every time!
+AlwaysCC is a Chrome/Firefox extension that automatically enables closed captions on YouTube videos and lets you choose your preferred subtitle language or translation. No more manually clicking the CC button every time!
 
 ## Features
 
 - **Auto-Enable**: Automatically turns on captions when you watch YouTube videos
+- **On/Off Switch**: Toggle auto-enable behavior on or off at any time
 - **Language Selection**: Choose your preferred subtitle language
 - **Auto-Translation**: Select "auto-translate" to any supported language
-- **Custom Options**: Enter exact caption names for perfect matching
-- **Quick Presets**: One-click buttons for common subtitle options
 - **Seamless Experience**: Works behind the scenes without disrupting your viewing
 
 ## Installation
 
-### Firefox Add-ons Store (Recommended)
+### Chrome (Manual Installation)
 
-The extension is now available on the official Firefox Add-ons Store:
+The extension is not yet published on the Chrome Web Store. To install it manually:
 
-1. Visit [AlwaysCC on Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/alwayscc/)
-2. Click "Add to Firefox"
-3. Follow the prompts to complete installation
+1. Download this repository (`git clone https://github.com/GarFiwld/AlwaysCC.git` or download ZIP)
+2. Open Chrome and go to `chrome://extensions`
+3. Enable "Developer mode" (toggle in the top right)
+4. Click "Load unpacked"
+5. Select the extension folder (the one containing `manifest.json`)
 
-### Manual Installation
+### Firefox (Manual Installation)
 
 If you prefer to install manually:
 
-1. Download this repository (`git clone https://github.com/oop7/AlwaysCC.git` or download ZIP)
+1. Download this repository (`git clone https://github.com/GarFiwld/AlwaysCC.git` or download ZIP)
 2. Open Firefox and go to `about:debugging`
 3. Click "This Firefox"
 4. Click "Load Temporary Add-on..."
@@ -60,23 +60,22 @@ This method only works in Firefox Developer Edition, Firefox Nightly, or Firefox
 ## Usage
 
 1. After installation, click the AlwaysCC icon in your browser toolbar
-2. Select your preferred subtitle option:
-   - Choose from the dropdown menu
-   - Use one of the preset buttons
-   - Enter a custom subtitle name
-3. Click "Save Preferences"
+2. Use the toggle switch to turn auto-enable on or off
+3. Choose your preferred subtitle language from the dropdown menu — it saves automatically as soon as you select it
 4. That's it! AlwaysCC will now automatically enable your preferred subtitles on all YouTube videos
 
 <img src="screenshots/popup.png" alt="AlwaysCC Popup Interface" width="300">
 
 ## How It Works
 
-AlwaysCC monitors YouTube pages and:
+When the toggle is on, AlwaysCC monitors YouTube pages and:
 1. Detects when a video is loaded
 2. Checks if captions are already enabled
 3. Enables captions if needed
 4. Navigates YouTube's menu system to select your preferred subtitle option
 5. Handles auto-translate selection when needed
+
+Turning the toggle off disables the auto-enable behavior; your preferred subtitle language stays saved and selectable in the popup regardless of the toggle state.
 
 The extension is designed to be lightweight and only activates on YouTube pages.
 
@@ -84,27 +83,25 @@ The extension is designed to be lightweight and only activates on YouTube pages.
 
 ### Prerequisites
 
-- Firefox browser
+- Chrome or Firefox browser
 - Basic knowledge of JavaScript, HTML, and CSS
 
 ### Setup
 
 1. Clone the repository:
    ```
-   git clone https://github.com/oop7/AlwaysCC.git
+   git clone https://github.com/GarFiwld/AlwaysCC.git
    ```
 
 2. Make your changes to the code
 
 3. Test the extension:
-   - Open Firefox and go to `about:debugging`
-   - Click "This Firefox"
-   - Click "Load Temporary Add-on..."
-   - Select any file from the extension folder
+   - **Chrome**: go to `chrome://extensions`, enable "Developer mode", click "Load unpacked", and select the extension folder
+   - **Firefox**: go to `about:debugging`, click "This Firefox", click "Load Temporary Add-on...", and select any file from the extension folder
 
 4. Package the extension:
-   - Run the included `package.bat` script
-   - The XPI file will be created in the `build` directory
+   - Run the included `package.ps1` script
+   - A single `alwayscc.zip` will be created in the `build` directory, installable on both Chrome Web Store and Firefox AMO
 
 ### Project Structure
 
@@ -130,11 +127,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
+- This project is a fork of [AlwaysCC](https://github.com/oop7/AlwaysCC.git) by [oop7](https://github.com/oop7) — all credit for the original idea and implementation goes to them
 - Thanks to all contributors and users of AlwaysCC
 - Built with love for the hearing-impaired community and language learners
 
 ---
-
-<div align="center">
-  <sub>Made by <a href="https://github.com/oop7">oop7</a> with ❤️</sub>
-</div> 

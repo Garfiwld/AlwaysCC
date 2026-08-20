@@ -7,59 +7,70 @@
 let captionsEnabledForCurrentVideo = false;
 let currentVideoId = '';
 
-// Default subtitle preference (now using YouTube's actual format)
-let PREFERRED_SUBTITLE = "English (auto-generated)";
+// Default subtitle preference: just a plain language name
+let PREFERRED_LANGUAGE = "Thai";
 
-// Format conversion map to handle differences between UI display and what we store
-const FORMAT_MAP = {
-  "English - auto generated": "English (auto-generated)",
-  "Spanish - auto generated": "Spanish (auto-generated)",
-  "French - auto generated": "French (auto-generated)",
-  "German - auto generated": "German (auto-generated)",
-  "Japanese - auto generated": "Japanese (auto-generated)"
-};
+// Whether the extension is active
+let EXTENSION_ENABLED = true;
 
 // Load user preference from storage
 function loadPreferredSubtitle() {
-  browser.storage.sync.get('preferredSubtitle').then((result) => {
+  chrome.storage.sync.get('preferredSubtitle').then((result) => {
     if (result.preferredSubtitle) {
-      // Check if we need to convert from the stored format to YouTube's format
-      if (FORMAT_MAP[result.preferredSubtitle]) {
-        PREFERRED_SUBTITLE = FORMAT_MAP[result.preferredSubtitle];
-      } else {
-        PREFERRED_SUBTITLE = result.preferredSubtitle;
-      }
-      console.log(`Loaded subtitle preference: ${PREFERRED_SUBTITLE}`);
+      PREFERRED_LANGUAGE = result.preferredSubtitle;
+      console.log(`Loaded subtitle preference: ${PREFERRED_LANGUAGE}`);
     }
   }).catch(error => {
     console.error("Error loading subtitle preference:", error);
   });
 }
 
+// Load enabled state from storage
+function loadEnabledState() {
+  chrome.storage.sync.get('extensionEnabled').then((result) => {
+    EXTENSION_ENABLED = result.extensionEnabled !== false;
+    console.log(`Loaded enabled state: ${EXTENSION_ENABLED}`);
+  }).catch(error => {
+    console.error("Error loading enabled state:", error);
+  });
+}
+
 // Load preference when script starts
 loadPreferredSubtitle();
+loadEnabledState();
 
 // Listen for changes to the preference
-browser.storage.onChanged.addListener((changes, area) => {
-  if (area === 'sync' && changes.preferredSubtitle) {
-    const newValue = changes.preferredSubtitle.newValue;
-    // Convert format if needed
-    if (FORMAT_MAP[newValue]) {
-      PREFERRED_SUBTITLE = FORMAT_MAP[newValue];
-    } else {
-      PREFERRED_SUBTITLE = newValue;
-    }
-    console.log(`Updated subtitle preference: ${PREFERRED_SUBTITLE}`);
-    
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'sync') return;
+
+  if (changes.preferredSubtitle) {
+    PREFERRED_LANGUAGE = changes.preferredSubtitle.newValue;
+    console.log(`Updated subtitle preference: ${PREFERRED_LANGUAGE}`);
+
     // Reset tracking to allow re-processing current video with new preference
     captionsEnabledForCurrentVideo = false;
     // Try to apply the new setting immediately
     setTimeout(enableCaptions, 500);
   }
+
+  if (changes.extensionEnabled) {
+    EXTENSION_ENABLED = changes.extensionEnabled.newValue !== false;
+    console.log(`Updated enabled state: ${EXTENSION_ENABLED}`);
+
+    if (EXTENSION_ENABLED) {
+      // Reset tracking so captions get applied on re-enable
+      captionsEnabledForCurrentVideo = false;
+      setTimeout(enableCaptions, 500);
+    }
+  }
 });
 
 // Main function to enable captions
 function enableCaptions() {
+  if (!EXTENSION_ENABLED) {
+    return;
+  }
+
   // Only run on video pages
   if (!window.location.pathname.includes('/watch')) {
     return;
@@ -141,140 +152,120 @@ function enableCaptions() {
   }
 }
 
-// Function to select the preferred subtitle language/type
-function selectPreferredSubtitle() {
-  console.log(`Attempting to select preferred subtitle: ${PREFERRED_SUBTITLE}`);
-  
-  // Check if we need to handle auto-translate
-  const isAutoTranslate = PREFERRED_SUBTITLE.startsWith('auto-translate:');
-  let targetLanguage = '';
-  
-  if (isAutoTranslate) {
-    // Extract target language from the preference string
-    targetLanguage = PREFERRED_SUBTITLE.split(':')[1];
-    console.log(`Auto-translate mode detected. Target language: ${targetLanguage}`);
+// Opens Settings -> Subtitles/CC and hands back the submenu's option elements.
+// Calls onReady(null) if either menu couldn't be found.
+function openSubtitlesSubmenu(settingsButton, onReady) {
+  settingsButton.click();
+  console.log("Clicked settings button");
+
+  setTimeout(() => {
+    const menuItems = document.querySelectorAll('.ytp-menuitem');
+    let subtitlesMenuItem = null;
+
+    for (const item of menuItems) {
+      const text = item.textContent.trim();
+      if (text.includes('Subtitles/CC') || text.includes('Caption')) {
+        subtitlesMenuItem = item;
+        break;
+      }
+    }
+
+    if (!subtitlesMenuItem) {
+      console.log("Subtitles menu item not found, closing menu");
+      settingsButton.click();
+      onReady(null);
+      return;
+    }
+
+    subtitlesMenuItem.click();
+    console.log("Clicked subtitles menu item");
+
+    setTimeout(() => {
+      onReady(document.querySelectorAll('.ytp-menuitem'));
+    }, 300);
+  }, 300);
+}
+
+// Fallback: open the Auto-translate submenu and pick the preferred language.
+function tryAutoTranslate(settingsButton, subtitleOptions) {
+  let autoTranslateOption = null;
+  for (const option of subtitleOptions) {
+    if (option.textContent.trim().includes('Auto-translate')) {
+      autoTranslateOption = option;
+      break;
+    }
   }
-  
-  // Click the settings button to open the menu
+
+  if (!autoTranslateOption) {
+    console.log("Auto-translate option not found, closing menu");
+    settingsButton.click();
+    return;
+  }
+
+  autoTranslateOption.click();
+  console.log("Clicked auto-translate option");
+
+  setTimeout(() => {
+    const languageOptions = document.querySelectorAll('.ytp-menuitem');
+    let targetLanguageOption = null;
+
+    for (const option of languageOptions) {
+      if (option.textContent.trim().includes(PREFERRED_LANGUAGE)) {
+        targetLanguageOption = option;
+        break;
+      }
+    }
+
+    if (targetLanguageOption) {
+      targetLanguageOption.click();
+      console.log(`Selected ${PREFERRED_LANGUAGE} from auto-translate menu`);
+    } else {
+      console.log(`${PREFERRED_LANGUAGE} not found in auto-translate menu, closing menu`);
+      settingsButton.click();
+    }
+  }, 300);
+}
+
+// Function to select the preferred subtitle language.
+// Tries an auto-generated (or manual) caption track in PREFERRED_LANGUAGE
+// first, then falls back to auto-translating to that language.
+function selectPreferredSubtitle() {
+  console.log(`Attempting to select preferred subtitle: ${PREFERRED_LANGUAGE}`);
+
   const settingsButton = document.querySelector('.ytp-settings-button');
   if (!settingsButton) {
     console.log("Settings button not found");
     return;
   }
-  
-  settingsButton.click();
-  console.log("Clicked settings button");
-  
-  // Wait for the settings menu to appear
-  setTimeout(() => {
-    // Find and click the subtitles menu item
-    const menuItems = document.querySelectorAll('.ytp-menuitem');
-    let subtitlesMenuItem = null;
-    
-    for (const item of menuItems) {
-      const text = item.textContent.trim();
-      if (text.includes('Subtitles/CC') || text.includes('Caption')) {
-        subtitlesMenuItem = item;
-        console.log(`Found subtitles menu item: ${text}`);
+
+  openSubtitlesSubmenu(settingsButton, (subtitleOptions) => {
+    if (!subtitleOptions) return;
+
+    // Step 1: look for a direct (auto-generated or manual) caption track
+    let match = null;
+    for (const option of subtitleOptions) {
+      const text = option.textContent.trim();
+      if (!text.includes('Auto-translate') && text.includes(PREFERRED_LANGUAGE)) {
+        match = option;
         break;
       }
     }
-    
-    if (subtitlesMenuItem) {
-      subtitlesMenuItem.click();
-      console.log("Clicked subtitles menu item");
-      
-      // Wait for the subtitles submenu to appear
+
+    if (match) {
+      match.click();
+      console.log(`Selected auto-generated/manual caption: ${match.textContent.trim()}`);
       setTimeout(() => {
-        // Find and click the preferred subtitle option
-        const subtitleOptions = document.querySelectorAll('.ytp-menuitem');
-        let preferredOption = null;
-        let autoTranslateOption = null;
-        
-        console.log(`Looking for subtitle option containing: ${isAutoTranslate ? 'Auto-translate' : PREFERRED_SUBTITLE}`);
-        
-        // Debug: Log all available options
-        subtitleOptions.forEach(option => {
-          const text = option.textContent.trim();
-          console.log(`Available option: ${text}`);
-          
-          // Keep track of the auto-translate option
-          if (text.includes('Auto-translate')) {
-            autoTranslateOption = option;
-          }
-        });
-        
-        if (isAutoTranslate && autoTranslateOption) {
-          // Click the Auto-translate option
-          autoTranslateOption.click();
-          console.log("Clicked auto-translate option");
-          
-          // Wait for the language submenu to appear
-          setTimeout(() => {
-            // Find and click the target language
-            const languageOptions = document.querySelectorAll('.ytp-menuitem');
-            let targetLanguageOption = null;
-            
-            console.log(`Looking for language option containing: ${targetLanguage}`);
-            
-            // Debug: Log all available language options
-            languageOptions.forEach(option => {
-              console.log(`Available language: ${option.textContent.trim()}`);
-              
-              if (option.textContent.trim().includes(targetLanguage)) {
-                targetLanguageOption = option;
-              }
-            });
-            
-            if (targetLanguageOption) {
-              targetLanguageOption.click();
-              console.log(`Selected ${targetLanguage} from auto-translate menu`);
-            } else {
-              console.log(`Could not find ${targetLanguage} in auto-translate menu`);
-              // If can't find the exact language, just close the menu
-              settingsButton.click();
-            }
-          }, 300);
-        } else if (!isAutoTranslate) {
-          // Regular subtitle selection
-          for (const option of subtitleOptions) {
-            const text = option.textContent.trim();
-            if (text.includes(PREFERRED_SUBTITLE)) {
-              preferredOption = option;
-              console.log(`Found preferred subtitle option: ${text}`);
-              break;
-            }
-          }
-          
-          if (preferredOption) {
-            preferredOption.click();
-            console.log("Clicked preferred subtitle option");
-            
-            // Always close the settings menu after selecting the option
-            setTimeout(() => {
-              // Check if the settings menu is still open
-              if (document.querySelector('.ytp-settings-menu')) {
-                console.log("Closing settings menu");
-                settingsButton.click();
-              }
-            }, 300);
-          } else {
-            // If preferred option not found, just close the menu
-            console.log("Preferred subtitle option not found, closing menu");
-            settingsButton.click();
-          }
-        } else {
-          // Auto-translate was requested but option not found
-          console.log("Auto-translate option not found, closing menu");
+        if (document.querySelector('.ytp-settings-menu')) {
           settingsButton.click();
         }
       }, 300);
-    } else {
-      // If subtitles menu item not found, just close the menu
-      console.log("Subtitles menu item not found, closing menu");
-      settingsButton.click();
+      return;
     }
-  }, 300);
+
+    // Step 2: fall back to auto-translate
+    console.log(`No direct caption track for ${PREFERRED_LANGUAGE}, falling back to auto-translate`);
+    tryAutoTranslate(settingsButton, subtitleOptions);
+  });
 }
 
 // Initial run when page loads
