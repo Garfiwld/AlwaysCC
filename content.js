@@ -152,6 +152,18 @@ function enableCaptions() {
   }
 }
 
+// Closes the settings panel if it's still open. Checks the button's own
+// aria-expanded state rather than looking for .ytp-settings-menu in the DOM,
+// since that element can remain present-but-hidden after YouTube closes the
+// panel on its own — relying on it caused the button.click() here to
+// re-toggle (and re-open) an already-closed menu.
+function closeSettingsMenu(settingsButton) {
+  if (settingsButton.getAttribute('aria-expanded') === 'true') {
+    settingsButton.click();
+    console.log("Settings menu still open (aria-expanded=true), closing it");
+  }
+}
+
 // Opens Settings -> Subtitles/CC and hands back the submenu's option elements.
 // Calls onReady(null) if either menu couldn't be found.
 function openSubtitlesSubmenu(settingsButton, onReady) {
@@ -172,7 +184,7 @@ function openSubtitlesSubmenu(settingsButton, onReady) {
 
     if (!subtitlesMenuItem) {
       console.log("Subtitles menu item not found, closing menu");
-      settingsButton.click();
+      closeSettingsMenu(settingsButton);
       onReady(null);
       return;
     }
@@ -198,7 +210,7 @@ function tryAutoTranslate(settingsButton, subtitleOptions) {
 
   if (!autoTranslateOption) {
     console.log("Auto-translate option not found, closing menu");
-    settingsButton.click();
+    closeSettingsMenu(settingsButton);
     return;
   }
 
@@ -219,9 +231,11 @@ function tryAutoTranslate(settingsButton, subtitleOptions) {
     if (targetLanguageOption) {
       targetLanguageOption.click();
       console.log(`Selected ${PREFERRED_LANGUAGE} from auto-translate menu`);
+      // Give YouTube a moment to close the panel on its own, then verify.
+      setTimeout(() => closeSettingsMenu(settingsButton), 300);
     } else {
       console.log(`${PREFERRED_LANGUAGE} not found in auto-translate menu, closing menu`);
-      settingsButton.click();
+      closeSettingsMenu(settingsButton);
     }
   }, 300);
 }
@@ -254,11 +268,8 @@ function selectPreferredSubtitle() {
     if (match) {
       match.click();
       console.log(`Selected auto-generated/manual caption: ${match.textContent.trim()}`);
-      setTimeout(() => {
-        if (document.querySelector('.ytp-settings-menu')) {
-          settingsButton.click();
-        }
-      }, 300);
+      // Give YouTube a moment to close the panel on its own, then verify.
+      setTimeout(() => closeSettingsMenu(settingsButton), 300);
       return;
     }
 
