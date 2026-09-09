@@ -106,10 +106,17 @@ The extension is designed to be lightweight and only activates on YouTube pages.
 ### Project Structure
 
 - `manifest.json` - Extension configuration
-- `content.js` - Core functionality that runs on YouTube pages
+- `src/` - Content script, split by concern (loaded in order):
+  - `state.js` - Shared state & config namespace
+  - `menu.js` - Helpers for driving YouTube's settings menu
+  - `subtitles.js` - Preferred subtitle selection (also turns CC on)
+  - `audiotrack.js` - Preferred audio-track selection
+  - `apply.js` - Orchestrator: both selections in one settings-menu session
+  - `storage.js` - Load settings & react to changes
+  - `main.js` - Bootstrap / scheduling
 - `popup.html` & `popup.js` - User interface for settings
 - `icons/` - Extension icons
-- `package.bat` - Packaging script
+- `package.ps1` - Packaging script
 
 ## Contributing
 

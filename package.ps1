@@ -13,7 +13,7 @@ if (-not (Test-Path "manifest.json")) {
 
 # Check required files exist
 $missingFiles = 0
-foreach ($file in @("content.js", "popup.html", "popup.js")) {
+foreach ($file in @("src\state.js", "src\menu.js", "src\subtitles.js", "src\audiotrack.js", "src\apply.js", "src\storage.js", "src\main.js", "popup.html", "popup.js")) {
     if (-not (Test-Path $file)) {
         Write-Host "ERROR: Required file $file not found."
         $missingFiles++
@@ -41,7 +41,7 @@ New-Item -ItemType Directory -Path "$tempDir\icons" | Out-Null
 Write-Host ""
 Write-Host "[1/2] Packaging extension..."
 Copy-Item "manifest.json" -Destination $tempDir
-Copy-Item "content.js" -Destination $tempDir
+Copy-Item "src" -Destination $tempDir -Recurse
 Copy-Item "popup.html" -Destination $tempDir
 Copy-Item "popup.js" -Destination $tempDir
 

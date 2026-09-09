@@ -24,7 +24,15 @@
   "content_scripts": [
     {
       "matches": ["*://*.youtube.com/*"],
-      "js": ["content.js"]
+      "js": [
+        "src/state.js",
+        "src/menu.js",
+        "src/subtitles.js",
+        "src/audiotrack.js",
+        "src/apply.js",
+        "src/storage.js",
+        "src/main.js"
+      ]
     }
   ],
   "browser_specific_settings": {
